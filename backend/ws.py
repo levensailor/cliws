@@ -101,12 +101,18 @@ async def ws_run(websocket: WebSocket) -> None:
       elif msg_type == "resize" and run:
         cols = int(payload.get("cols", run.cols))
         rows = int(payload.get("rows", run.rows))
-        run.set_winsize(cols, rows)
+        try:
+          run.set_winsize(cols, rows)
+        except OSError as exc:
+          logger.debug("Resize ignored for run %s: %s", run.run_id, exc)
 
       elif msg_type == "signal" and run:
         sig_name = payload.get("signal", "SIGINT")
         sig = getattr(signal_mod, sig_name, signal_mod.SIGINT)
-        await run.send_signal(sig)
+        try:
+          await run.send_signal(sig)
+        except OSError as exc:
+          logger.debug("Signal ignored for run %s: %s", run.run_id, exc)
 
       elif msg_type == "stop" and run:
         await manager.stop_run(run.run_id)

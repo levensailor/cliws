@@ -67,8 +67,13 @@ class Run:
   def set_winsize(self, cols: int, rows: int) -> None:
     self.cols = cols
     self.rows = rows
+    if not self.running or self.master_fd < 0:
+      return
     winsize = struct.pack("HHHH", rows, cols, 0, 0)
-    fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
+    try:
+      fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, winsize)
+    except OSError as exc:
+      logger.debug("Ignoring PTY resize for run %s: %s", self.run_id, exc)
 
   async def start_flush_loop(self) -> None:
     self.loop = asyncio.get_running_loop()
@@ -107,6 +112,8 @@ class Run:
       attachment.dropped = True
 
   def on_readable(self) -> None:
+    if self.master_fd < 0:
+      return
     try:
       data = os.read(self.master_fd, 65536)
     except OSError:
@@ -116,7 +123,7 @@ class Run:
     self.pending.extend(data)
 
   async def write_input(self, data: bytes) -> None:
-    if not self.running:
+    if not self.running or self.master_fd < 0:
       return
     try:
       os.write(self.master_fd, data)
@@ -124,20 +131,26 @@ class Run:
       logger.warning("Failed writing to PTY for run %s: %s", self.run_id, exc)
 
   async def send_signal(self, sig: int) -> None:
-    if not self.process.pid:
+    if not self.running or not self.process.pid:
       return
     try:
       os.killpg(os.getpgid(self.process.pid), sig)
     except ProcessLookupError:
       pass
+    except OSError as exc:
+      logger.debug("Ignoring signal for run %s: %s", self.run_id, exc)
 
   async def stop(self) -> None:
+    if not self.running:
+      return
     await self.send_signal(signal.SIGTERM)
     await asyncio.sleep(1.0)
     if self.running and self.process.pid:
       try:
         os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
       except ProcessLookupError:
+        pass
+      except OSError:
         pass
 
   async def finalize(self) -> None:
@@ -149,10 +162,12 @@ class Run:
         attachment.queue.put_nowait(None)
       except asyncio.QueueFull:
         pass
-    try:
-      os.close(self.master_fd)
-    except OSError:
-      pass
+    if self.master_fd >= 0:
+      try:
+        os.close(self.master_fd)
+      except OSError:
+        pass
+      self.master_fd = -1
 
 
 class RunManager:

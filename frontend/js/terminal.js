@@ -146,7 +146,7 @@ export class TerminalDrawer {
           return;
         }
         const dims = fitAddon.proposeDimensions();
-        if (dims && session.runId && socket.isOpen) {
+        if (dims && session.runId && session.running && socket.isOpen) {
           socket.resize(dims.cols, dims.rows).catch((error) => {
             console.warn('Terminal resize failed', error);
           });
