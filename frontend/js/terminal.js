@@ -184,6 +184,7 @@ export class TerminalDrawer {
 
     const observer = new ResizeObserver(() => session.fit());
     observer.observe(pane);
+    session.observer = observer;
 
     this.sessions.set(sessionId, session);
     this._addTab(sessionId, entry.name, true);
@@ -195,13 +196,88 @@ export class TerminalDrawer {
   }
 
   _addTab(sessionId, label, running) {
-    const tab = document.createElement('button');
-    tab.type = 'button';
+    const tab = document.createElement('div');
     tab.className = 'drawer-tab';
     tab.dataset.sessionId = sessionId;
-    tab.innerHTML = `<span class="status-dot${running ? '' : ' exit'}"></span><span>${label}</span>`;
+    tab.setAttribute('role', 'tab');
+    tab.tabIndex = 0;
+
+    const status = document.createElement('span');
+    status.className = `status-dot${running ? '' : ' exit'}`;
+
+    const title = document.createElement('span');
+    title.className = 'drawer-tab-label';
+    title.textContent = label;
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'drawer-tab-close';
+    close.title = 'Close tab';
+    close.setAttribute('aria-label', `Close ${label}`);
+    close.textContent = '×';
+    close.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.closeTab(sessionId);
+    });
+
+    tab.appendChild(status);
+    tab.appendChild(title);
+    tab.appendChild(close);
     tab.addEventListener('click', () => this.setActive(sessionId));
+    tab.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        this.setActive(sessionId);
+      }
+    });
     this.tabsEl.appendChild(tab);
+  }
+
+  async closeTab(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    try {
+      if (session.running && session.socket?.isOpen) {
+        await session.socket.stop();
+      }
+    } catch (error) {
+      console.warn('Failed to stop run while closing tab', error);
+    }
+
+    try {
+      session.socket?.close();
+    } catch (error) {
+      console.warn('Failed to close websocket', error);
+    }
+
+    try {
+      session.observer?.disconnect();
+    } catch (error) {
+      // ignore
+    }
+
+    try {
+      session.term?.dispose();
+    } catch (error) {
+      console.warn('Failed to dispose terminal', error);
+    }
+
+    session.pane?.remove();
+    this.tabsEl.querySelector(`[data-session-id="${sessionId}"]`)?.remove();
+    this.sessions.delete(sessionId);
+
+    if (this.activeId === sessionId) {
+      this.activeId = null;
+      const remaining = [...this.sessions.keys()];
+      if (remaining.length) {
+        this.setActive(remaining[remaining.length - 1]);
+      } else {
+        this.drawer.classList.add('collapsed');
+        this.drawer.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('drawer-open');
+      }
+    }
   }
 
   _updateTabStatus(sessionId, running, code) {

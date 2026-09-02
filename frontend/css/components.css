@@ -227,7 +227,7 @@
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  padding: 4px 10px;
+  padding: 4px 8px 4px 10px;
   cursor: pointer;
   font-size: 11px;
   white-space: nowrap;
@@ -238,11 +238,40 @@
   color: var(--text);
 }
 
+.drawer-tab-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawer-tab-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0;
+  width: 14px;
+}
+
+.drawer-tab:hover .drawer-tab-close,
+.drawer-tab:focus-within .drawer-tab-close,
+.drawer-tab.active .drawer-tab-close {
+  opacity: 1;
+}
+
+.drawer-tab-close:hover {
+  color: var(--danger);
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
+  flex-shrink: 0;
 }
 
 .status-dot.exit {
