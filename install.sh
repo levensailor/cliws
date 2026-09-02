@@ -4,8 +4,10 @@ set -euo pipefail
 INSTALL_DIR="${INSTALL_DIR:-/opt/cliws}"
 SERVICE_NAME="${SERVICE_NAME:-cliws}"
 SKIP_VENDOR="${SKIP_VENDOR:-0}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+PYTHON_BIN="${PYTHON_BIN:-}"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MIN_PYTHON_MAJOR=3
+MIN_PYTHON_MINOR=10
 
 usage() {
   cat <<EOF
@@ -13,15 +15,51 @@ Usage: sudo ./install.sh [options]
 
 Options:
   --install-dir PATH   Installation directory (default: /opt/cliws)
+  --python PATH        Python interpreter (default: auto-detect >=3.10)
   --no-vendor          Skip downloading frontend vendor assets
   --help               Show this help
 EOF
+}
+
+python_meets_minimum() {
+  local binary="$1"
+  "${binary}" -c "import sys; raise SystemExit(0 if sys.version_info >= (${MIN_PYTHON_MAJOR}, ${MIN_PYTHON_MINOR}) else 1)"
+}
+
+select_python() {
+  if [[ -n "${PYTHON_BIN}" ]]; then
+    if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
+      echo "Configured PYTHON_BIN not found: ${PYTHON_BIN}" >&2
+      exit 1
+    fi
+    if ! python_meets_minimum "${PYTHON_BIN}"; then
+      echo "Configured PYTHON_BIN must be Python ${MIN_PYTHON_MAJOR}.${MIN_PYTHON_MINOR}+ (${PYTHON_BIN} is older)." >&2
+      exit 1
+    fi
+    return
+  fi
+
+  local candidate
+  for candidate in python3.12 python3.11 python3.10 python3; do
+    if command -v "${candidate}" >/dev/null 2>&1 && python_meets_minimum "${candidate}"; then
+      PYTHON_BIN="${candidate}"
+      return
+    fi
+  done
+
+  echo "Python ${MIN_PYTHON_MAJOR}.${MIN_PYTHON_MINOR}+ is required (FastAPI/pydantic dependency)." >&2
+  echo "Install python3.11 (or newer) and re-run install.sh." >&2
+  exit 1
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --install-dir)
       INSTALL_DIR="$2"
+      shift 2
+      ;;
+    --python)
+      PYTHON_BIN="$2"
       shift 2
       ;;
     --no-vendor)
@@ -45,10 +83,8 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
-if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
-  echo "python3 is required." >&2
-  exit 1
-fi
+select_python
+echo "Using Python: ${PYTHON_BIN} ($("${PYTHON_BIN}" --version 2>&1))"
 
 if ! command -v openssl >/dev/null 2>&1; then
   echo "openssl is required for TLS certificate generation." >&2

@@ -29,7 +29,8 @@ Use the machine's VLAN IP address. The installer generates a self-signed certifi
 ### Requirements
 
 - Linux host (systemd)
-- `python3`, `pip`, `sqlite3`, `openssl`, `curl`, `unzip`
+- Python **3.10+** (`python3.11` recommended on Amazon Linux 2023)
+- `pip`, `sqlite3`, `openssl`, `curl`, `unzip`
 - Root access (service runs as root to execute commands and bind port 443)
 
 ### Install
