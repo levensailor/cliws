@@ -15,7 +15,7 @@ INSERT INTO entries (subsection_id, name, cmd, icon, position) VALUES
     (1, 'INTERFACES', 'ip -br a', 'fa-solid fa-network-wired', 2),
     (1, 'LISTENING PORTS', 'ss -lntp', 'fa-solid fa-plug', 3),
     (2, 'JOURNAL FOLLOW', 'journalctl -f -n 50', 'fa-solid fa-scroll', 0),
-    (2, 'SYSLOG TAIL', 'tail -f /var/log/syslog 2>/dev/null || tail -f /var/log/messages', 'fa-solid fa-file-lines', 1),
+    (2, 'SYSLOG TAIL', 'if [ -f /var/log/syslog ]; then tail -f /var/log/syslog; elif [ -f /var/log/messages ]; then tail -f /var/log/messages; else journalctl -f -n 50; fi', 'fa-solid fa-file-lines', 1),
     (3, 'DOCKER STATS', 'docker stats --no-stream && docker stats', 'fa-brands fa-docker', 0),
     (3, 'DOCKER PS', 'docker ps -a', 'fa-solid fa-box', 1),
     (4, 'PING GATEWAY', 'ping -c 4 $(ip route | awk ''/default/ {print $3; exit}'')', 'fa-solid fa-wifi', 0),
