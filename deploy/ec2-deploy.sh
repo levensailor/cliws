@@ -11,6 +11,14 @@ PUBLIC_IP="${1:-${EC2_PUBLIC_IP:-}}"
 SSH_USER="${EC2_SSH_USER:-ec2-user}"
 SSH_KEY_PATH="${EC2_SSH_KEY_PATH:-${HOME}/.ssh/cliws_ec2_key}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/cliws}"
+
+# Expand a leading ~ if EC2_SSH_KEY_PATH was set with a tilde (env vars do not expand ~).
+if [[ "${SSH_KEY_PATH}" == "~/"* ]]; then
+  SSH_KEY_PATH="${HOME}/${SSH_KEY_PATH:2}"
+elif [[ "${SSH_KEY_PATH}" == "~" ]]; then
+  SSH_KEY_PATH="${HOME}"
+fi
+
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -i "${SSH_KEY_PATH}")
 
 if [[ -z "${PUBLIC_IP}" ]]; then
