@@ -100,6 +100,53 @@ sudo journalctl -u cliws -f
 sudo ./uninstall.sh
 ```
 
+## CI/CD (GitHub Actions → EC2)
+
+Pushes to `main` provision (or reuse) a Linux EC2 instance and deploy CLIWS automatically.
+
+Workflow file: [`.github/workflows/deploy-ec2.yml`](.github/workflows/deploy-ec2.yml)
+
+### Required GitHub secrets
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | AWS access key with EC2 permissions |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
+| `EC2_SSH_PRIVATE_KEY` | Private key matching the EC2 key pair (PEM contents) |
+
+### Recommended GitHub variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `AWS_REGION` | `us-east-1` | AWS region |
+| `EC2_KEY_NAME` | *(required)* | Existing EC2 key pair name |
+| `EC2_INSTANCE_TYPE` | `t3.micro` | Instance size (free-tier friendly) |
+| `EC2_INSTANCE_NAME` | `cliws` | Name tag used to reuse the same VM |
+| `EC2_FORCE_NEW_INSTANCE` | `false` | Set `true` to terminate and recreate |
+
+### What the pipeline does
+
+1. Authenticates with `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`
+2. Creates (or reuses) a security group allowing SSH (`22`) and HTTPS (`443`) from `0.0.0.0/0`
+3. Launches Amazon Linux 2023 with a public IP (`t3.micro` by default)
+4. Copies the repo over SSH and runs `install.sh`
+5. Verifies `https://<public-ip>/healthz`
+
+Manual redeploy with a fresh VM:
+
+```text
+GitHub → Actions → Deploy to EC2 → Run workflow → force_new_instance = true
+```
+
+### IAM permissions
+
+The AWS user/role needs at minimum:
+
+- `ec2:RunInstances`, `ec2:DescribeInstances`, `ec2:StartInstances`, `ec2:StopInstances`, `ec2:TerminateInstances`
+- `ec2:CreateSecurityGroup`, `ec2:DescribeSecurityGroups`, `ec2:AuthorizeSecurityGroupIngress`, `ec2:CreateTags`
+- `ec2:DescribeVpcs`, `ec2:DescribeImages`
+- `ssm:GetParameters`
+
 ## Configuration
 
 Environment file: `/opt/cliws/.env`

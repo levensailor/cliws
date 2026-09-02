@@ -1,0 +1,81 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      force_new_instance:
+        description: Terminate and recreate the EC2 instance
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  EC2_INSTANCE_TYPE: ${{ vars.EC2_INSTANCE_TYPE || 't3.micro' }}
+  EC2_INSTANCE_NAME: ${{ vars.EC2_INSTANCE_NAME || 'cliws' }}
+  EC2_KEY_NAME: ${{ vars.EC2_KEY_NAME }}
+  EC2_FORCE_NEW_INSTANCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_new_instance || vars.EC2_FORCE_NEW_INSTANCE || 'false' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate deployment configuration
+        run: |
+          if [ -z "${EC2_KEY_NAME}" ]; then
+            echo "Set repository variable EC2_KEY_NAME to your AWS EC2 key pair name."
+            exit 1
+          fi
+          if [ -z "${{ secrets.EC2_SSH_PRIVATE_KEY }}" ]; then
+            echo "Set repository secret EC2_SSH_PRIVATE_KEY to the matching private key."
+            exit 1
+          fi
+
+      - name: Provision EC2 instance
+        id: provision
+        run: |
+          chmod +x deploy/*.sh
+          ./deploy/ec2-provision.sh
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/cliws_ec2_key
+          chmod 600 ~/.ssh/cliws_ec2_key
+
+      - name: Deploy application to EC2
+        id: deploy
+        env:
+          EC2_PUBLIC_IP: ${{ steps.provision.outputs.public_ip }}
+          EC2_SSH_KEY_PATH: ~/.ssh/cliws_ec2_key
+        run: ./deploy/ec2-deploy.sh "${EC2_PUBLIC_IP}"
+
+      - name: Deployment summary
+        run: |
+          {
+            echo "## CLIWS EC2 deployment"
+            echo ""
+            echo "- Instance ID: \`${{ steps.provision.outputs.instance_id }}\`"
+            echo "- Public IP: \`${{ steps.provision.outputs.public_ip }}\`"
+            echo "- App URL: ${{ steps.deploy.outputs.app_url }}"
+            echo "- Region: \`${{ env.AWS_REGION }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
