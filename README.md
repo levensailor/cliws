@@ -152,6 +152,26 @@ The AWS user/role needs at minimum:
 - `ec2:DescribeVpcs`, `ec2:DescribeImages`
 - `ssm:GetParameters`
 
+## WebSockets over EC2 / HTTPS
+
+CLIWS streams command output with **WSS** on the same host and port as the page (`wss://<public-ip>/ws/run`). You do **not** need a separate WebSocket port, ALB sticky sessions, or CloudFront for this direct-to-instance setup.
+
+What is required (you already have most of this):
+
+1. **HTTPS on 443** — the page is `https://`, so the browser uses `wss://` automatically
+2. **Security group** — TCP `443` inbound (already opened by the deploy scripts)
+3. **Same origin** — frontend connects to `location.host`; no CORS/proxy rewrite needed
+4. **Accept the self-signed cert once** — after you click through the browser warning for HTTPS, WSS uses the same cert and works
+5. **uvicorn with websockets** — provided by `uvicorn[standard]` in `requirements.txt`
+
+Not required for this architecture:
+
+- Opening port 80 for WebSockets
+- An Application Load Balancer WebSocket target group
+- Special EC2 networking beyond a public IP + SG rule for 443
+
+If the console shows `Still in CONNECTING state`, that is a client race (fixed in current `ws.js`), not missing EC2 WebSocket infrastructure.
+
 ## Configuration
 
 Environment file: `/opt/cliws/.env`

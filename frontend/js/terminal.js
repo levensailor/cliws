@@ -139,15 +139,24 @@ export class TerminalDrawer {
       outputBuffer: '',
       running: true,
       fit: () => {
-        fitAddon.fit();
+        try {
+          fitAddon.fit();
+        } catch (error) {
+          console.warn('Terminal fit failed', error);
+          return;
+        }
         const dims = fitAddon.proposeDimensions();
-        if (dims && session.runId) {
-          socket.resize(dims.cols, dims.rows);
+        if (dims && session.runId && socket.isOpen) {
+          socket.resize(dims.cols, dims.rows).catch((error) => {
+            console.warn('Terminal resize failed', error);
+          });
         }
       },
       restart: async () => {
         term.clear();
         session.outputBuffer = '';
+        session.runId = null;
+        session.running = true;
         await socket.start(entry.id, term.cols, term.rows);
       },
     };
@@ -159,7 +168,7 @@ export class TerminalDrawer {
     socket.on('output', (data) => {
       const text = typeof data === 'string' ? data : new TextDecoder().decode(data);
       session.outputBuffer += text;
-      term.write(data);
+      term.write(typeof data === 'string' ? data : new Uint8Array(data));
     });
     socket.on('exit', (payload) => {
       session.running = false;
@@ -169,7 +178,9 @@ export class TerminalDrawer {
       term.writeln(`\r\n[cliws error] ${payload.message}`);
     });
 
-    term.onData((data) => socket.input(data));
+    term.onData((data) => {
+      socket.input(data).catch((error) => console.warn('Terminal input failed', error));
+    });
 
     const observer = new ResizeObserver(() => session.fit());
     observer.observe(pane);
@@ -180,6 +191,7 @@ export class TerminalDrawer {
     this.open();
 
     await socket.start(entry.id, term.cols || 120, term.rows || 30);
+    session.fit();
   }
 
   _addTab(sessionId, label, running) {

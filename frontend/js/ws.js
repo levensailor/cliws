@@ -17,16 +17,50 @@ export class RunSocket {
     this.handlers[event] = handler;
   }
 
+  get isOpen() {
+    return Boolean(this.socket && this.socket.readyState === WebSocket.OPEN);
+  }
+
   connect() {
-    if (this.socket && this.socket.readyState <= WebSocket.OPEN) {
+    if (this.isOpen) {
       return Promise.resolve();
     }
+    if (this._connectPromise) {
+      return this._connectPromise;
+    }
+
     this._connectPromise = new Promise((resolve, reject) => {
-      this.socket = new WebSocket(this.url);
-      this.socket.binaryType = 'arraybuffer';
-      this.socket.addEventListener('open', () => resolve());
-      this.socket.addEventListener('error', (event) => reject(event));
-      this.socket.addEventListener('message', (event) => {
+      const socket = new WebSocket(this.url);
+      this.socket = socket;
+      socket.binaryType = 'arraybuffer';
+
+      const cleanup = () => {
+        if (this._connectPromise) {
+          this._connectPromise = null;
+        }
+      };
+
+      socket.addEventListener('open', () => {
+        cleanup();
+        resolve();
+      });
+
+      socket.addEventListener('error', (event) => {
+        cleanup();
+        if (this.socket === socket) {
+          this.socket = null;
+        }
+        reject(event);
+      });
+
+      socket.addEventListener('close', () => {
+        cleanup();
+        if (this.socket === socket) {
+          this.socket = null;
+        }
+      });
+
+      socket.addEventListener('message', (event) => {
         if (typeof event.data === 'string') {
           const payload = JSON.parse(event.data);
           const handler = this.handlers[payload.type];
@@ -38,11 +72,15 @@ export class RunSocket {
         this.handlers.output(event.data);
       });
     });
+
     return this._connectPromise;
   }
 
   async send(payload) {
     await this.connect();
+    if (!this.isOpen) {
+      throw new Error('WebSocket is not open');
+    }
     this.socket.send(JSON.stringify(payload));
   }
 
@@ -55,10 +93,16 @@ export class RunSocket {
   }
 
   async input(data) {
+    if (!this.isOpen) {
+      return;
+    }
     await this.send({ type: 'input', data });
   }
 
   async resize(cols, rows) {
+    if (!this.isOpen) {
+      return;
+    }
     await this.send({ type: 'resize', cols, rows });
   }
 
@@ -71,6 +115,7 @@ export class RunSocket {
   }
 
   close() {
+    this._connectPromise = null;
     if (this.socket) {
       this.socket.close();
       this.socket = null;
