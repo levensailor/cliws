@@ -106,20 +106,24 @@ Pushes to `main` provision (or reuse) a Linux EC2 instance and deploy CLIWS auto
 
 Workflow file: [`.github/workflows/deploy-ec2.yml`](.github/workflows/deploy-ec2.yml)
 
-### Required GitHub secrets
+The deploy job uses the GitHub **environment** named `main`. Create it under **Settings → Environments → New environment → `main`**.
 
-| Secret | Description |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | AWS access key with EC2 permissions |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
-| `EC2_SSH_PRIVATE_KEY` | Private key matching the EC2 key pair (PEM contents) |
+### Required credentials (environment `main` or repository secrets)
 
-### Recommended GitHub variables
+| Name | Where | Description |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID` | Environment secret/variable or repo secret | AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | Environment secret/variable or repo secret | AWS secret key |
+| `EC2_SSH_PRIVATE_KEY` | Environment secret/variable or repo secret | PEM private key for the EC2 key pair |
+
+The workflow checks environment secrets first, then falls back to environment variables, then repository secrets/variables.
+
+### Required GitHub variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `AWS_REGION` | `us-east-1` | AWS region |
 | `EC2_KEY_NAME` | *(required)* | Existing EC2 key pair name |
+| `AWS_REGION` | `us-east-1` | AWS region |
 | `EC2_INSTANCE_TYPE` | `t3.micro` | Instance size (free-tier friendly) |
 | `EC2_INSTANCE_NAME` | `cliws` | Name tag used to reuse the same VM |
 | `EC2_FORCE_NEW_INSTANCE` | `false` | Set `true` to terminate and recreate |
