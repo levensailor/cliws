@@ -55,17 +55,10 @@ if ! command -v openssl >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Installing CLIWS to ${INSTALL_DIR}..."
+echo "Copying application files..."
 mkdir -p "${INSTALL_DIR}"
-
-rsync -a --delete \
-  --exclude '.git' \
-  --exclude '.venv' \
-  --exclude 'data' \
-  --exclude 'logs' \
-  --exclude 'certs' \
-  --exclude '.env' \
-  "${SOURCE_DIR}/" "${INSTALL_DIR}/"
+cp -a "${SOURCE_DIR}/." "${INSTALL_DIR}/"
+rm -rf "${INSTALL_DIR}/.git" "${INSTALL_DIR}/.venv" "${INSTALL_DIR}/data" "${INSTALL_DIR}/logs" "${INSTALL_DIR}/certs"
 
 if [[ "${SKIP_VENDOR}" -eq 0 ]]; then
   APP_DIR="${INSTALL_DIR}" bash "${INSTALL_DIR}/scripts/fetch_vendor.sh"
