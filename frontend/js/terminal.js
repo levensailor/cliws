@@ -2,6 +2,17 @@ import { RunSocket } from './ws.js';
 
 const DRAWER_HEIGHT_KEY = 'cliws.drawerHeight';
 
+function resolveXtermConstructor(name) {
+  const candidate = globalThis[name];
+  if (typeof candidate === 'function') {
+    return candidate;
+  }
+  if (candidate && typeof candidate[name] === 'function') {
+    return candidate[name];
+  }
+  throw new Error(`${name} is not available. Ensure /vendor/xterm scripts are loaded.`);
+}
+
 export class TerminalDrawer {
   constructor() {
     this.drawer = document.getElementById('terminal-drawer');
@@ -9,6 +20,9 @@ export class TerminalDrawer {
     this.host = document.getElementById('terminal-host');
     this.sessions = new Map();
     this.activeId = null;
+    this.Terminal = resolveXtermConstructor('Terminal');
+    this.FitAddon = resolveXtermConstructor('FitAddon');
+    this.WebLinksAddon = resolveXtermConstructor('WebLinksAddon');
     this._bindControls();
     this._bindResize();
     this._restoreHeight();
@@ -96,7 +110,7 @@ export class TerminalDrawer {
     pane.className = 'terminal-pane';
     this.host.appendChild(pane);
 
-    const term = new globalThis.Terminal({
+    const term = new this.Terminal({
       convertEagerly: true,
       fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
       fontSize: 13,
@@ -107,8 +121,8 @@ export class TerminalDrawer {
         selectionBackground: '#3e4451',
       },
     });
-    const fitAddon = new globalThis.FitAddon();
-    const webLinksAddon = new globalThis.WebLinksAddon();
+    const fitAddon = new this.FitAddon();
+    const webLinksAddon = new this.WebLinksAddon();
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
     term.open(pane);
