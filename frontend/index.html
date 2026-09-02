@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLIWS</title>
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="/vendor/xterm/xterm.css" />
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="page-header">
+      <div class="header-rule"></div>
+      <div class="header-content">
+        <div class="header-left">
+          <div id="date-line" class="date-line"></div>
+          <h1 id="greeting" class="greeting">Good afternoon!</h1>
+        </div>
+        <div class="header-right">
+          <button id="edit-toggle" class="edit-toggle" type="button" aria-pressed="false">EDIT</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="dashboard" class="dashboard"></main>
+  </div>
+
+  <div id="terminal-drawer" class="terminal-drawer collapsed" aria-hidden="true">
+    <div id="drawer-resizer" class="drawer-resizer" title="Resize terminal"></div>
+    <div class="drawer-toolbar">
+      <div id="drawer-tabs" class="drawer-tabs"></div>
+      <div class="drawer-actions">
+        <button type="button" id="btn-ctrlc" class="drawer-btn" title="Send Ctrl+C">Ctrl+C</button>
+        <button type="button" id="btn-stop" class="drawer-btn" title="Stop process">Stop</button>
+        <button type="button" id="btn-restart" class="drawer-btn" title="Restart command">Restart</button>
+        <button type="button" id="btn-clear" class="drawer-btn" title="Clear terminal">Clear</button>
+        <button type="button" id="btn-copy" class="drawer-btn" title="Copy selection">Copy</button>
+        <button type="button" id="btn-download" class="drawer-btn" title="Download output">Download</button>
+        <button type="button" id="btn-collapse" class="drawer-btn" title="Collapse drawer">▼</button>
+      </div>
+    </div>
+    <div id="terminal-host" class="terminal-host"></div>
+  </div>
+
+  <div id="modal-root" class="modal-root hidden" aria-hidden="true"></div>
+  <div id="icon-picker-root" class="icon-picker-root hidden" aria-hidden="true"></div>
+
+  <script src="/vendor/xterm/xterm.js"></script>
+  <script src="/vendor/xterm/addon-fit.js"></script>
+  <script src="/vendor/xterm/addon-web-links.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

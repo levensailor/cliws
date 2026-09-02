@@ -1,0 +1,41 @@
+:root {
+  --bg: #282c34;
+  --bg-elevated: #2f343e;
+  --text: #dfd9d6;
+  --text-muted: #9a9899;
+  --accent: #98c379;
+  --accent-dim: #607756;
+  --danger: #e06c75;
+  --border: rgba(223, 217, 214, 0.12);
+  --shadow: rgba(0, 0, 0, 0.35);
+  --font-sans: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  --content-width: 1240px;
+  --drawer-height: 320px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+body.drawer-open {
+  padding-bottom: var(--drawer-height);
+}
+
+body.edit-mode .editable:hover {
+  outline: 1px dashed var(--accent);
+  cursor: text;
+}
+
+.hidden {
+  display: none !important;
+}
